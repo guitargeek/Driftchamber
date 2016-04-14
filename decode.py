@@ -13,7 +13,7 @@ necessary for the use case this scrips was written for:
 - calculate precise timing information as described in the DRS manual
 """
 
-import sys
+from sys import argv, exit
 from ROOT import TFile, TTree
 from ROOT.std import vector
 from struct import unpack
@@ -23,17 +23,13 @@ from array import array
 # Prepare Input
 ########################################
 
-# number of boards and used channels, specify manually
-n_boards = 2
-n_ch = 5
-
-if not len(sys.argv) == 2:
+if not len(argv) == 2:
     print "Wrong number of arguments!"
     print "Usage: python test_channels.py filename.dat"
     print "Exiting..."
-    sys.exit()
+    exit()
 
-input_filename = sys.argv[1]
+input_filename = argv[1]
 f = open( input_filename, "rb")
 
 ########################################
@@ -45,49 +41,57 @@ outfile = TFile(input_filename.replace(".dat",".root"), 'recreate')
 outtree_t = TTree('tree_t', 'tree_t')
 outtree_v = TTree('tree_v', 'tree_v')
 
-# Create variables ...
-channels_t = [vector(float)() for i in range(n_ch)]
-channels_v = [vector(float)() for i in range(n_ch)]
+# Create event number variable and add to tree
 var_n = array('i',[0])
-
-# .. And add to tree
-for i in range(n_ch):
-    setattr(outtree_t, "chn{}_t".format(i+1), channels_t[i])
-    outtree_t.Branch("chn{}_t".format(i+1), channels_t[i])
-    setattr(outtree_v, "chn{}_v".format(i+1), channels_v[i])
-    outtree_v.Branch("chn{}_v".format(i+1), channels_v[i])
-
 outtree_v.Branch("n", var_n, "n/I")
 
 ########################################
 # Actual Work
 ########################################
 
-# Get the TIME header and serial numberat the top of the file out of the way
-event_header = f.read(4 *2)
-
 # Read in effective time width bins in ns and calculate the relative time from
-# the effective time bins.  This is just a rough calculation, see DRS manual
+# the effective time bins. This is just a rough calculation, see DRS manual
 # p. 24 on how to do this more precise using the trigger cell information.
-current_board = 0
+# The script also gets channel number information from this section to create
+# the appropriate number of tree branches.
 
-# Reset the vector branches
-for chn in channels_t:
-    chn.resize(0)
+# To increase to the total number of channels and boards
+n_ch = 0
+n_boards = 0
 
-for i in range(n_ch):
+# Empty lists for containing the variables connected to the tree branches
+channels_t = []
+channels_v = []
+
+while True:
     header = f.read(4)
-    time_floats = unpack('f'*1024, f.read(4*1024))
-    for j, x in enumerate(time_floats):
-        if j == 0:
-            channels_t[i].push_back(x)
-        else:
-            channels_t[i].push_back(x + channels_t[i][-1])
+    # For skipping the initial time header
+    if header == "TIME":
+        continue
+    elif header.startswith("C"):
+        n_ch = n_ch + 1
+        # Create variables ...
+        channels_t.append(vector(float)())
+        channels_v.append(vector(float)())
+        # .. And add to tree
+        setattr(outtree_t, "chn{}_t".format(n_ch), channels_t[-1])
+        outtree_t.Branch("chn{}_t".format(n_ch), channels_t[-1])
+        setattr(outtree_v, "chn{}_v".format(n_ch), channels_v[-1])
+        outtree_v.Branch("chn{}_v".format(n_ch), channels_v[-1])
+        time_floats = unpack('f'*1024, f.read(4*1024))
+        for j, x in enumerate(time_floats):
+            if j == 0:
+                channels_t[-1].push_back(x)
+            else:
+                channels_t[-1].push_back(x + channels_t[-1][-1])
 
-    # "Fluff" the serial number when a new board begins
-    if i == 3 and current_board + 1 < n_boards:
-        fluff = f.read(4*1)
-        current_board = current_board + 1
+    # Increment the number of boards when seeing a new serial number
+    elif header.startswith("B#"):
+        n_boards = n_boards + 1
+
+    # End the loop if header is not CXX or a serial number
+    else:
+        break
 
 outtree_t.Fill()
 
@@ -102,8 +106,8 @@ outtree_t.Fill()
 
 current_board = 0
 
-# Skip the first EHDR header including serial nr and timing info
-fluff = f.read(4*8)
+# Skip the fluff after first EHDR header (serial number and timing info)
+fluff = f.read(4*7)
 
 while True:
     # Read the header, this is either
