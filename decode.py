@@ -9,12 +9,11 @@ based on decode.C by Dmitry Hits
 
 What this script doesn't do, because really precise timing information was not
 necessary for the use case this scrips was written for:
-- store event date/time
 - calculate precise timing information as described in the DRS manual
 """
 
 from sys import argv, exit
-from ROOT import TFile, TTree
+from ROOT import TFile, TTree, TTimeStamp, AddressOf
 from ROOT.std import vector
 from struct import unpack
 from array import array
@@ -38,12 +37,15 @@ f = open( input_filename, "rb")
 
 # File and Trees
 outfile = TFile(input_filename.replace(".dat",".root"), 'recreate')
-outtree_t = TTree('tree_t', 'tree_t')
-outtree_v = TTree('tree_v', 'tree_v')
+outtree = TTree('tree', 'tree')
 
-# Create event number variable and add to tree
-var_n = array('i',[0])
-outtree_v.Branch("n", var_n, "n/I")
+# Create board and event serial number and date variables and add to tree
+timestamp = TTimeStamp()
+outtree.Branch("EventDateTime", "TTimeStamp", AddressOf(timestamp))
+board_serials = vector(int)()
+outtree.Branch("BoardSerials", board_serials)
+event_serial = array('i',[0])
+outtree.Branch("EventNumber", event_serial, "EventNumber/i")
 
 ########################################
 # Actual Work
@@ -74,10 +76,10 @@ while True:
         channels_t.append(vector(float)())
         channels_v.append(vector(float)())
         # .. And add to tree
-        setattr(outtree_t, "chn{}_t".format(n_ch), channels_t[-1])
-        outtree_t.Branch("chn{}_t".format(n_ch), channels_t[-1])
-        setattr(outtree_v, "chn{}_v".format(n_ch), channels_v[-1])
-        outtree_v.Branch("chn{}_v".format(n_ch), channels_v[-1])
+        setattr(outtree, "chn{}_t".format(n_ch), channels_t[-1])
+        outtree.Branch("chn{}_t".format(n_ch), channels_t[-1])
+        setattr(outtree, "chn{}_v".format(n_ch), channels_v[-1])
+        outtree.Branch("chn{}_v".format(n_ch), channels_v[-1])
         time_floats = unpack('f'*1024, f.read(4*1024))
         for j, x in enumerate(time_floats):
             if j == 0:
@@ -86,14 +88,15 @@ while True:
                 channels_t[-1].push_back(x + channels_t[-1][-1])
 
     # Increment the number of boards when seeing a new serial number
+    # and store the serial numbers in the board serial numbers vector
     elif header.startswith("B#"):
+        board_serial = unpack('H', header[2:])[0]
+        board_serials.push_back(board_serial)
         n_boards = n_boards + 1
 
     # End the loop if header is not CXX or a serial number
-    else:
+    elif header == "EHDR":
         break
-
-outtree_t.Fill()
 
 # This is the main loop One iteration corresponds to reading one channel every
 # few channels a new event can start We know that this if the case if we see
@@ -105,13 +108,35 @@ outtree_t.Fill()
 # again with C001.
 
 current_board = 0
+is_new_event = True
 
-# Skip the fluff after first EHDR header (serial number and timing info)
-fluff = f.read(4*7)
+info_string = "Reading in events measurend with {0} channels on {1} board(s)..."
+print(info_string.format(n_ch, n_boards))
 
 while True:
+    # Sart of Event
+    if is_new_event:
+        event_serial[0] = unpack("I", f.read(4))[0]
+        is_new_event = False
+        # Reset the vector branches
+        for chn in channels_v:
+            chn.resize(0)
+
+        # Set the timestamp, where the milliseconds need to be converted to
+        # nanoseconds to fit the function arguments
+        dt_list = unpack("H"*8, f.read(16))
+        timestamp_args = list(dt_list[:-2]) + [dt_list[-2]*int(1e6), 1, 0]
+        timestamp.Set(*timestamp_args)
+
+        # Fluff the serial number and trigger cell
+        fluff = f.read(4*2)
+
+        # Reset current board number
+        current_board = 0
+        continue
+
     # Read the header, this is either
-    #  EHDR -> begin new event
+    #  EHDR -> finish event
     #  C00x -> read the data
     #  ""   -> end of file
     header = f.read(4)
@@ -122,38 +147,26 @@ while True:
         current_board = current_board + 1
         continue
 
-    # End of File
-    if header == "":
-        outtree_v.Fill()
-        break
-
-    # Sart of Event
+    # End of Event
     elif header == "EHDR":
         # Fille previous event
-        outtree_v.Fill()
-
-        # Reset the vector branches
-        for chn in channels_v:
-            chn.resize(0)
-
-        # Fluff the serial number and timing info
-        fluff = f.read(4*7)
-
-        # Increment event counter and reset current board number
-        var_n[0] += 1
-        current_board = 0
-        continue
+        outtree.Fill()
+        is_new_event = True
 
     # Read and store data
-    else:
+    elif header.startswith("C"):
         # the voltage info is 1024 floats with 2-byte precision
         chn_i = int(header[-1]) + current_board * 4
         voltage_ints = unpack('H'*1024, f.read(2048))
         for x in voltage_ints:
             channels_v[chn_i-1].push_back( ((x / 65535.) - 0.5) * 1000)
 
+    # End of File
+    elif header == "":
+        outtree.Fill()
+        break
+
 # Clean up
 f.close()
-outtree_t.Write()
-outtree_v.Write()
+outtree.Write()
 outfile.Close()
