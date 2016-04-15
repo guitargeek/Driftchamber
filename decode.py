@@ -1,22 +1,18 @@
 #!/usr/bin/env python
 """
-Script to convert binary format to root
-for DRS4 evaluation boards.
+Script to convert binary format to root for DRS4 evaluation boards.
 http://www.psi.ch/drs/evaluation-board
-Jonas Rembser, 2016-04-13 based on work by
+
+Jonas Rembser (rembserj@phys.ethz.ch), 2016-04-15 based on work by
 Gregor Kasieczka, ETHZ, 2014-01-15
 based on decode.C by Dmitry Hits
-
-What this script doesn't do, because really precise timing information was not
-necessary for the use case this scrips was written for:
-- calculate precise timing information as described in the DRS manual
 """
 
 from sys import argv, exit
 from ROOT import TFile, TTree, TTimeStamp, AddressOf
 from ROOT.std import vector
 from struct import unpack
-from array import array
+from numpy import array, uint32, cumsum, roll
 
 ########################################
 # Prepare Input
@@ -44,7 +40,7 @@ timestamp = TTimeStamp()
 outtree.Branch("EventDateTime", "TTimeStamp", AddressOf(timestamp))
 board_serials = vector(int)()
 outtree.Branch("BoardSerials", board_serials)
-event_serial = array('i',[0])
+event_serial = array([0], dtype=uint32)
 outtree.Branch("EventNumber", event_serial, "EventNumber/i")
 
 ########################################
@@ -65,6 +61,8 @@ n_boards = 0
 channels_t = []
 channels_v = []
 
+timebins = []
+
 while True:
     header = f.read(4)
     # For skipping the initial time header
@@ -80,12 +78,7 @@ while True:
         outtree.Branch("chn{}_t".format(n_ch), channels_t[-1])
         setattr(outtree, "chn{}_v".format(n_ch), channels_v[-1])
         outtree.Branch("chn{}_v".format(n_ch), channels_v[-1])
-        time_floats = unpack('f'*1024, f.read(4*1024))
-        for j, x in enumerate(time_floats):
-            if j == 0:
-                channels_t[-1].push_back(x)
-            else:
-                channels_t[-1].push_back(x + channels_t[-1][-1])
+        timebins.append(array(unpack('f'*1024, f.read(4*1024))))
 
     # Increment the number of boards when seeing a new serial number
     # and store the serial numbers in the board serial numbers vector
@@ -108,6 +101,8 @@ while True:
 # again with C001.
 
 current_board = 0
+tcell = 0 # current trigger cell
+t_00 = 0 # time in first cell in first channel for alignment
 is_new_event = True
 
 info_string = "Reading in events measurend with {0} channels on {1} board(s)..."
@@ -119,6 +114,8 @@ while True:
         event_serial[0] = unpack("I", f.read(4))[0]
         is_new_event = False
         # Reset the vector branches
+        for chn in channels_t:
+            chn.resize(0)
         for chn in channels_v:
             chn.resize(0)
 
@@ -128,8 +125,9 @@ while True:
         timestamp_args = list(dt_list[:-2]) + [dt_list[-2]*int(1e6), 1, 0]
         timestamp.Set(*timestamp_args)
 
-        # Fluff the serial number and trigger cell
-        fluff = f.read(4*2)
+        # Fluff the serial number and read in trigger cell
+        fluff = f.read(4)
+        tcell = unpack('H', f.read(4)[2:])[0]
 
         # Reset current board number
         current_board = 0
@@ -143,8 +141,8 @@ while True:
 
     # Handle next board
     if header.startswith("B#"):
-        fluff = f.read(4*1)
         current_board = current_board + 1
+        tcell = unpack('H', f.read(4)[2:])[0]
         continue
 
     # End of Event
@@ -157,9 +155,23 @@ while True:
     elif header.startswith("C"):
         # the voltage info is 1024 floats with 2-byte precision
         chn_i = int(header[-1]) + current_board * 4
+
         voltage_ints = unpack('H'*1024, f.read(2048))
-        for x in voltage_ints:
-            channels_v[chn_i-1].push_back( ((x / 65535.) - 0.5) * 1000)
+
+        # Calculate precise timing using the time bins and trigger cell
+        # see p. 23 in the reference
+        t = cumsum(roll(timebins[chn_i-1], -tcell))
+        t_0 = t[(1024-tcell)%1024] # time of first cell for correction
+        if chn_i % 4 == 1:
+            t_00 = t_0
+        t = t - (t_0 - t_00) # correction
+        # Note: it is a bit unclear how to do the correction with
+        # multiple boards, so the boards are just corrected independently
+        # for now
+
+        for i, x in enumerate(voltage_ints):
+            channels_v[chn_i-1].push_back( ((x / 65535.) - 0.5))
+            channels_t[chn_i-1].push_back(t[i])
 
     # End of File
     elif header == "":
