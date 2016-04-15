@@ -42,6 +42,7 @@ board_serials = vector(int)()
 outtree.Branch("BoardSerials", board_serials)
 event_serial = array([0], dtype=uint32)
 outtree.Branch("EventNumber", event_serial, "EventNumber/i")
+# more branches will be added dynamically in the first while loop
 
 ########################################
 # Actual Work
@@ -61,6 +62,7 @@ n_boards = 0
 channels_t = []
 channels_v = []
 
+# List of numpy arrays to store the time bin information
 timebins = []
 
 while True:
@@ -78,6 +80,8 @@ while True:
         outtree.Branch("chn{}_t".format(n_ch), channels_t[-1])
         setattr(outtree, "chn{}_v".format(n_ch), channels_v[-1])
         outtree.Branch("chn{}_v".format(n_ch), channels_v[-1])
+
+        # Write timebins to numpy array
         timebins.append(array(unpack('f'*1024, f.read(4*1024))))
 
     # Increment the number of boards when seeing a new serial number
