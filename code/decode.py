@@ -20,7 +20,7 @@ from numpy import array, uint32, cumsum, roll
 
 if not len(argv) == 2:
     print "Wrong number of arguments!"
-    print "Usage: python test_channels.py filename.dat"
+    print "Usage: python decode.py filename.dat"
     print "Exiting..."
     exit()
 
@@ -160,7 +160,7 @@ while True:
         # the voltage info is 1024 floats with 2-byte precision
         chn_i = int(header[-1]) + current_board * 4
 
-        voltage_ints = unpack('H'*1024, f.read(2048))
+        voltage_ints = unpack('H'*1024, f.read(2*1024))
 
         # Calculate precise timing using the time bins and trigger cell
         # see p. 23 in the reference
