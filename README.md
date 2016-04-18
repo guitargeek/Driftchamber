@@ -25,6 +25,14 @@ rootfile, with one tree for each run.
 A plot with the gas amplification measurements for different preassures and
 anode voltages is generated.
 
+### drift.py
+This script plots drift velocity against field voltage.
+
+### mc.py
+With this script, one can do a monte carlo simulation to see how the
+muon tracks are distributed in the wire chamber and compare with measurement.
+
+
 ## References
 \[2\]: https://polybox.ethz.ch/index.php/s/6WYbMPdgEID5oBW
 

@@ -9,7 +9,7 @@ to save an imporved set of event variables.
 
 from ROOT import TFile, TGraph, TF1, TTree, TTimeStamp, AddressOf
 from sys import argv
-from numpy import array, argmax, mean, float32, zeros, uint32
+from numpy import array, argmax, mean, float32, zeros, uint32, diff, argmin
 from scipy.integrate import simps
 import os
 
@@ -76,12 +76,13 @@ def save_event_tree(filename, treename):
         intree.SetBranchAddress("chn{}_v".format(i+1), v[i])
         intree.SetBranchAddress("EventDateTime", AddressOf(timestamp))
 
-        outtree.Branch("EventN", eventn, "EventN/i")
-        outtree.Branch("Seconds", seconds, "Seconds/i")
+        # Just comment out the branches which are not needed in the final tree
+        #outtree.Branch("EventN", eventn, "EventN/i")
+        #outtree.Branch("Seconds", seconds, "Seconds/i")
         outtree.Branch("Chn{}_Height".format(c[i]), height[i], "Chn{}_Height/F".format(c[i]))
         outtree.Branch("Chn{}_Time".format(c[i]), time[i], "Chn{}_Time/F".format(c[i]))
-        outtree.Branch("Chn{}_Chi2".format(c[i]), chi2[i], "Chn{}_Chi2/F".format(c[i]))
-        outtree.Branch("Chn{}_Integral".format(c[i]), integral[i], "Chn{}_Integral/F".format(c[i]))
+        #outtree.Branch("Chn{}_Chi2".format(c[i]), chi2[i], "Chn{}_Chi2/F".format(c[i]))
+        #outtree.Branch("Chn{}_Integral".format(c[i]), integral[i], "Chn{}_Integral/F".format(c[i]))
 
 
     starting_seconds = 0
@@ -111,12 +112,19 @@ def save_event_tree(filename, treename):
             gr.Fit("landau", "Q")
             fit = gr.GetFunction("landau")
             chi2[i][0] = fit.GetChisquare()
-            # As the time of the signal we define the MPV of the fitted Landau
-            time[i][0] = fit.GetParameter(1)
+            # As the time of the signal we define the minimum of the derivative
+            d = diff(v_re)/diff(t_re)
+            vd = (v_re[:-1] + v_re[1:])/2
+            td = (t_re[:-1] + t_re[1:])/2
+            time[i][0] = td[argmin(d)]
+            # The height is defined as the maximum in the 10 bins following the
+            # signals time position
+            height[i][0] = max(-v_re[argmin(d):min(argmin(d) + 10,128)] - noise_lvl)
 
-            # Get the highest value and the pulse integral
-            height[i][0] = -min(v_re - noise_lvl)
-            integral[i][0] = -simps(v-noise_lvl, x=t)[0]
+            # Get the highest value (alternative measure for heigh)
+            # and the pulse integral
+            #height[i][0] = -min(v_re - noise_lvl)
+            integral[i][0] = -simps(v_re-noise_lvl, x=t_re)
 
         outtree.Fill()
 

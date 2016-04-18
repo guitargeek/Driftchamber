@@ -21,7 +21,6 @@ c1.cd()
 def get_gasamp(treename):
     tree = f.Get(treename)
 
-    measurement_time = tree.GetMaximum("Seconds")
     h = TH1F("h_{}".format(treename), "h_{}".format(treename), 1000, 0, 0.5)
     tree.Draw("Chn1_Height>>h_{0}".format(treename))
     h.Fit("landau", "Q")
