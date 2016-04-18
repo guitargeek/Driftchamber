@@ -11,8 +11,8 @@ based on decode.C by Dmitry Hits
 from sys import argv, exit
 from ROOT import TFile, TTree, TTimeStamp, AddressOf
 from ROOT.std import vector
+from numpy import array, uint32, cumsum, roll, zeros, float32
 from struct import unpack
-from numpy import array, uint32, cumsum, roll
 
 ########################################
 # Prepare Input
@@ -73,13 +73,11 @@ while True:
     elif header.startswith("C"):
         n_ch = n_ch + 1
         # Create variables ...
-        channels_t.append(vector(float)())
-        channels_v.append(vector(float)())
+        channels_t.append(zeros(1024, dtype=float32))
+        channels_v.append(zeros(1024, dtype=float32))
         # .. And add to tree
-        setattr(outtree, "chn{}_t".format(n_ch), channels_t[-1])
-        outtree.Branch("chn{}_t".format(n_ch), channels_t[-1])
-        setattr(outtree, "chn{}_v".format(n_ch), channels_v[-1])
-        outtree.Branch("chn{}_v".format(n_ch), channels_v[-1])
+        outtree.Branch("chn{}_t".format(n_ch), channels_t[-1], "chn{}_t[1024]/F")
+        outtree.Branch("chn{}_v".format(n_ch), channels_v[-1], "chn{}_v[1024]/F")
 
         # Write timebins to numpy array
         timebins.append(array(unpack('f'*1024, f.read(4*1024))))
@@ -117,11 +115,6 @@ while True:
     if is_new_event:
         event_serial[0] = unpack("I", f.read(4))[0]
         is_new_event = False
-        # Reset the vector branches
-        for chn in channels_t:
-            chn.resize(0)
-        for chn in channels_v:
-            chn.resize(0)
 
         # Set the timestamp, where the milliseconds need to be converted to
         # nanoseconds to fit the function arguments
@@ -174,8 +167,8 @@ while True:
         # for now
 
         for i, x in enumerate(voltage_ints):
-            channels_v[chn_i-1].push_back( ((x / 65535.) - 0.5))
-            channels_t[chn_i-1].push_back(t[i])
+            channels_v[chn_i-1][i] = ((x / 65535.) - 0.5)
+            channels_t[chn_i-1][i] = t[i]
 
     # End of File
     elif header == "":

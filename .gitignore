@@ -65,3 +65,4 @@ target/
 driftchamber-vp-data.tar.gz
 plots/
 rootfiles/
+*.root

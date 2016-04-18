@@ -55,9 +55,8 @@ gStyle.SetPadTickY(1)
 
 gStyle.SetTitleOffset(1.5)
 
-c1 = TCanvas("c1","A Simple Graph Example",200,10,1000,500);
+c1 = TCanvas("c1","c1",200,10,1000,500);
 c1.Divide(2,1,0,0)
-c1.SetTitle("Test")
 gr1 = TGraphErrors(len(n_1),hv_1,n_1,zeros(len(n_1)),n_err_1)
 gr2 = TGraphErrors(len(n_2),hv_2,n_2,zeros(len(n_2)),n_err_2)
 gr1.SetTitle("")
@@ -90,18 +89,18 @@ c1.cd(1)
 gPad.SetTopMargin(0.001)
 
 # Misuse the TLegend class to draw title and v_th
-legt1 = TLegend(0.2,0.96,0.53,0.89);
-legt1.SetTextFont(62);
-legt1.SetHeader("PMT 1");
-legt1.SetBorderSize(0);
-legt1.SetTextSize(fontsize);
+legt1 = TLegend(0.2,0.96,0.53,0.89)
+legt1.SetTextFont(62)
+legt1.SetHeader("PMT 1")
+legt1.SetBorderSize(0)
+legt1.SetTextSize(fontsize)
 
-legi1 = TLegend(0.2,0.90,0.53,0.83);
-legi1.SetHeader( "V_{th} = " + str(v_th_1));
-legi1.SetBorderSize(0);
-legi1.SetTextSize(fontsize);
+legi1 = TLegend(0.2,0.90,0.53,0.83)
+legi1.SetHeader( "V_{th} = " + str(v_th_1))
+legi1.SetBorderSize(0)
+legi1.SetTextSize(fontsize)
 
-gr1.Draw("AP");
+gr1.Draw("AP")
 legt1.Draw()
 legi1.Draw()
 
@@ -126,7 +125,7 @@ legt2.Draw()
 legi2.Draw()
 
 c1.Draw()
-c1.Print("../figures/pmt.pdf")
+c1.Print("../plots/pmt.pdf")
 
 # I chose 2300 V for PMT 1 and 1980 V for PMT 2.
 # The discriminator pulse  width was tweaked to 30 ns in both cases.
