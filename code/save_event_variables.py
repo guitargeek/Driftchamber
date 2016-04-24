@@ -7,11 +7,27 @@ this new rootfile. If some information is missing, this script should be editetd
 to save an imporved set of event variables.
 """
 
-from ROOT import TFile, TGraph, TF1, TTree, TTimeStamp, AddressOf
+from ROOT import TFile, TGraph, TF1, TTree, TTimeStamp, AddressOf, TCanvas
 from sys import argv
-from numpy import array, argmax, mean, float32, zeros, uint32, diff, argmin
+from numpy import array, argmax, mean, float32, zeros, uint32, diff, argmin, arctan
 from scipy.integrate import simps
 import os
+
+# The drift velocity in mm/ns which was found by drift.py
+v_drift = 0.14 # WARNING! THIS HOLDS ONLY FOR THE 4000V DATA!
+# The time at which the first electrons arrive
+s = 640
+
+# Getting the driftchanber channel corresponding to a DRS channel
+c = [1, 3, 7, 8]
+
+# All the following geometric constants are given in mm
+# Distance between photomultipliers
+h = 290
+# Distance between wires
+w = 10
+# Calculate the distances of the read out wires from the top scintillator
+y = (array(c, dtype=float) - 1) * w + h/2 - 7*w/2
 
 # Method for rebinning. 2^n bins will be combined.
 def rebin(array, n):
@@ -29,9 +45,6 @@ n = 1024
 rootfiles_dir = "../rootfiles/"
 outfile = TFile("../data.root", 'recreate')
 
-# Getting the driftchanber channel corresponding to a DRS channel
-c = [1, 3, 7, 8]
-
 # Variables for the input tree
 t = [zeros(n, dtype=float32) for i in range(4)]
 v = [zeros(n, dtype=float32) for i in range(4)]
@@ -45,6 +58,12 @@ height = [zeros(1, dtype=float32) for i in range(4)]
 time = [zeros(1, dtype=float32) for i in range(4)]
 chi2 = [zeros(1, dtype=float32) for i in range(4)]
 integral = [zeros(1, dtype=float32) for i in range(4)]
+
+# variables related to the track reconstruction
+x0 = zeros(1, dtype=float32)
+x0_err = zeros(1, dtype=float32)
+theta = zeros(1, dtype=float32)
+theta_err = zeros(1, dtype=float32)
 
 # Save event variables for the run stored in 'filename' in a tree called
 # 'treename' and save this tree to 'outfile'
@@ -84,6 +103,12 @@ def save_event_tree(filename, treename):
         #outtree.Branch("Chn{}_Chi2".format(c[i]), chi2[i], "Chn{}_Chi2/F".format(c[i]))
         #outtree.Branch("Chn{}_Integral".format(c[i]), integral[i], "Chn{}_Integral/F".format(c[i]))
 
+        if n_ch > 1:
+            outtree.Branch("X0", x0, "X0/F")
+            outtree.Branch("X0Err", x0_err, "X0Err/F")
+            outtree.Branch("Theta", theta, "Theta/F")
+            outtree.Branch("ThetaErr", theta_err, "ThetaErr/F")
+
 
     starting_seconds = 0
     # This loop iterates over each event
@@ -93,6 +118,8 @@ def save_event_tree(filename, treename):
         if j == 0:
             starting_seconds = timestamp.GetSec()
         seconds[0] = timestamp.GetSec() - starting_seconds
+
+        x = zeros(4, dtype=float)
 
         # This loop iterates over each channel
         for i in range(n_ch):
@@ -126,12 +153,32 @@ def save_event_tree(filename, treename):
             #height[i][0] = -min(v_re - noise_lvl)
             integral[i][0] = -simps(v_re-noise_lvl, x=t_re)
 
+            x[i] = v_drift * (time[i][0] - s)
+
+        # Fit the track if channel number is greater than 1
+        if n_ch > 1:
+            gr = TGraph(n_ch, y, x)
+            gr.Fit("pol1", "Q")
+            #gr.Draw("APL")
+            #c1.Update()
+            #raw_input("enter")
+            fit = gr.GetFunction("pol1")
+
+            x0[0] = fit.GetParameter(0)
+            theta[0] = arctan(fit.GetParameter(1))
+            theta_err[0] = 1/(1+fit.GetParameter(1)*2)*fit.GetParError(1)
+            x0_err[0] = fit.GetParError(0)
+
         outtree.Fill()
 
     # Write tree and clean up
     outfile.cd()
     outtree.Write()
     f.Close()
+
+#c1 = TCanvas()
+#c1.cd()
+#c1.Draw()
 
 # Process all rootfiles in the rootfiles directory (including subdirectories)
 for path, subdirs, files in os.walk(rootfiles_dir):
