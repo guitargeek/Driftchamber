@@ -32,6 +32,8 @@ This script plots drift velocity against field voltage.
 With this script, one can do a monte carlo simulation to see how the
 muon tracks are distributed in the wire chamber and compare with measurement.
 
+### tracks.py
+Generates plots showing the distribution on incident angles and positions.
 
 ## References
 \[2\]: https://polybox.ethz.ch/index.php/s/6WYbMPdgEID5oBW

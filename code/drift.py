@@ -85,9 +85,9 @@ v_drift_err = dist/drifttimes**2*drifttimes_err
 
 fontsize = 0.04
 
-gr = TGraphErrors(len(voltages), voltages/1000, v_drift*1000, zeros(len(voltages)), 1000*v_drift_err)
+gr = TGraphErrors(len(voltages), voltages/1000/0.1, v_drift*1000, zeros(len(voltages)), 1000*v_drift_err)
 
-gr.GetXaxis().SetTitle("Drift voltage [kV]")
+gr.GetXaxis().SetTitle("Drift field [kV/m]")
 gr.GetYaxis().SetTitle("Drift velocity [mm/#mus]")
 gr.SetTitle("Drift velocity")
 

@@ -1,4 +1,4 @@
-from ROOT import TFile, TH1F, TCanvas, TF1, gStyle, gROOT, gPad, TLegend
+from ROOT import TFile, TH1F, TCanvas, TF1, gStyle, gROOT, gPad, TLegend, TH2F
 from numpy import arctan
 
 gROOT.SetBatch()
@@ -70,7 +70,7 @@ h_theta.SetMaximum(67)
 
 h_x0.GetYaxis().SetTitle("Number of events")
 h_x0.GetXaxis().SetTitle("x [mm]")
-h_theta.GetXaxis().SetTitle("theta [rad]")
+h_theta.GetXaxis().SetTitle("#theta [rad]")
 
 gPad.SetTopMargin(0.001)
 
@@ -113,3 +113,32 @@ legi2.Draw()
 
 c1.Draw()
 c1.Print("../plots/tracks.pdf")
+
+#####################
+# Plot a 2d histogram
+#####################
+fontsize = 0.04
+
+c2 = TCanvas("c2","c2",200,10,500,500)
+c2.cd()
+
+h = TH2F("h", "", 10, -20, 130, 10, -0.35, 0.45)
+n = tree.Draw("Theta:X0>>h", cut+"&&X0Err<6&&ThetaErr<0.04")
+
+h.GetXaxis().SetTitleOffset(1)
+h.GetYaxis().SetTitleOffset(1.2)
+
+h.GetXaxis().SetLabelSize(fontsize)
+h.GetXaxis().SetTitleSize(fontsize)
+h.GetYaxis().SetLabelSize(fontsize)
+h.GetYaxis().SetTitleSize(fontsize)
+h.SetLineColor(1)
+
+h.GetXaxis().SetTitle("x [mm]")
+h.GetYaxis().SetTitle("#theta [rad]")
+
+h.Draw("BOX")
+print h.GetEntries()
+
+c2.Draw()
+c2.Print("../plots/correlation.pdf")
