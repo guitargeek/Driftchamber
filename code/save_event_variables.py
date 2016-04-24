@@ -14,7 +14,7 @@ from scipy.integrate import simps
 import os
 
 # The drift velocity in mm/ns which was found by drift.py
-v_drift = 0.14 # WARNING! THIS HOLDS ONLY FOR THE 4000V DATA!
+v_drift = 0.13781766497 # WARNING! THIS HOLDS ONLY FOR THE 4000V DATA!
 # The time at which the first electrons arrive
 s = 640
 
@@ -56,8 +56,6 @@ eventn = zeros(1, dtype=uint32)
 seconds = zeros(1, dtype=uint32) # seconds passed until the beginning
 height = [zeros(1, dtype=float32) for i in range(4)]
 time = [zeros(1, dtype=float32) for i in range(4)]
-chi2 = [zeros(1, dtype=float32) for i in range(4)]
-integral = [zeros(1, dtype=float32) for i in range(4)]
 
 # variables related to the track reconstruction
 x0 = zeros(1, dtype=float32)
@@ -100,10 +98,8 @@ def save_event_tree(filename, treename):
         #outtree.Branch("Seconds", seconds, "Seconds/i")
         outtree.Branch("Chn{}_Height".format(c[i]), height[i], "Chn{}_Height/F".format(c[i]))
         outtree.Branch("Chn{}_Time".format(c[i]), time[i], "Chn{}_Time/F".format(c[i]))
-        #outtree.Branch("Chn{}_Chi2".format(c[i]), chi2[i], "Chn{}_Chi2/F".format(c[i]))
-        #outtree.Branch("Chn{}_Integral".format(c[i]), integral[i], "Chn{}_Integral/F".format(c[i]))
 
-        if n_ch > 1:
+        if n_ch > 1 and "4000V" in filename:
             outtree.Branch("X0", x0, "X0/F")
             outtree.Branch("X0Err", x0_err, "X0Err/F")
             outtree.Branch("Theta", theta, "Theta/F")
@@ -119,6 +115,7 @@ def save_event_tree(filename, treename):
             starting_seconds = timestamp.GetSec()
         seconds[0] = timestamp.GetSec() - starting_seconds
 
+        # Empty array to write the hit positions in
         x = zeros(4, dtype=float)
 
         # This loop iterates over each channel
@@ -132,36 +129,23 @@ def save_event_tree(filename, treename):
             # before triggering happened
             noise_lvl = mean(v[:30])
 
-            # Create a graph and fit it with Landau, as its chi2 will be one
-            # event variable to distingush good from bad events
-            gr = TGraph(int(n/8.), array(t_re, dtype=float),
-                    -array(v_re, dtype=float)+noise_lvl)
-            gr.Fit("landau", "Q")
-            fit = gr.GetFunction("landau")
-            chi2[i][0] = fit.GetChisquare()
             # As the time of the signal we define the minimum of the derivative
             d = diff(v_re)/diff(t_re)
             vd = (v_re[:-1] + v_re[1:])/2
             td = (t_re[:-1] + t_re[1:])/2
             time[i][0] = td[argmin(d)]
-            # The height is defined as the maximum in the 10 bins following the
-            # signals time position
+
+            # The height is defined as the maximum in the 10 bins following
+            # the signals time position minus the noise level
             height[i][0] = max(-v_re[argmin(d):min(argmin(d) + 10,128)] - noise_lvl)
 
-            # Get the highest value (alternative measure for heigh)
-            # and the pulse integral
-            #height[i][0] = -min(v_re - noise_lvl)
-            integral[i][0] = -simps(v_re-noise_lvl, x=t_re)
-
+            # Use the drift velocity to get hit positions for each wire
             x[i] = v_drift * (time[i][0] - s)
 
         # Fit the track if channel number is greater than 1
         if n_ch > 1:
             gr = TGraph(n_ch, y, x)
             gr.Fit("pol1", "Q")
-            #gr.Draw("APL")
-            #c1.Update()
-            #raw_input("enter")
             fit = gr.GetFunction("pol1")
 
             x0[0] = fit.GetParameter(0)
@@ -175,10 +159,6 @@ def save_event_tree(filename, treename):
     outfile.cd()
     outtree.Write()
     f.Close()
-
-#c1 = TCanvas()
-#c1.cd()
-#c1.Draw()
 
 # Process all rootfiles in the rootfiles directory (including subdirectories)
 for path, subdirs, files in os.walk(rootfiles_dir):

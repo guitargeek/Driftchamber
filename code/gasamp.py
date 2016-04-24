@@ -3,7 +3,7 @@ This script generates a plot where one can read off the gas amplification for
 different preassures and anode voltages.
 """
 
-from ROOT import (TFile, TGraph, TF1, AddressOf, TH1F, TCanvas, TGraph,
+from ROOT import (TFile, TF1, AddressOf, TH1F, TCanvas, TGraph,
                   gDirectory, TH1F, gROOT, TLegend, gStyle)
 from ROOT.std import vector
 from numpy import array, argmin, mean, zeros, float32, uint32
@@ -88,7 +88,7 @@ for i in range(n):
     fit.SetLineStyle(i+1)
     fit.SetRange(1.650, 2.625)
     graphs[i].GetXaxis().SetLimits(1.650,2.625)
-    graphs[i].SetMaximum(200)
+    graphs[i].SetMaximum(210)
     graphs[i].SetMinimum(4)
     graphs[i].SetName("gr{}".format(i+1))
     if i == 0:

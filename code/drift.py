@@ -2,11 +2,13 @@
 This script plots drift velocity against field voltage.
 """
 
-from ROOT import (TFile, TGraph, TF1, AddressOf, TH1F, TCanvas, TGraph,
+from ROOT import (TFile, TGraph, TF1, AddressOf, TH1F, TCanvas, TGraphErrors,
                   gDirectory, TH1F, gROOT, TLegend, gStyle)
 from numpy import array, argmin, mean, zeros, float32, uint32, sqrt
 import re
 from scipy.stats import sem
+
+gROOT.SetBatch()
 
 # Distance between cathode and signal wires in mm
 dist = 95.
@@ -20,6 +22,12 @@ th = 0.02
 factors = array([0.2108, 0.2046, 0.2085, 0.2112])
 
 f = TFile("../data.root")
+
+gStyle.SetPadTickX(1)
+gStyle.SetPadTickY(1)
+
+c1 = TCanvas("c1","c1",200,10,500,500)
+c1.cd()
 
 hists = []
 
@@ -67,18 +75,33 @@ for key in key_list:
 # Convert to numpy arrays
 voltages = array(voltages, dtype=float)
 drifttimes = array(drifttimes, dtype=float)
-print max(dist/drifttimes)
 
-import matplotlib.pyplot as plt
+v_drift = dist/drifttimes
+v_drift_err = dist/drifttimes**2*drifttimes_err
 
-plt.figure()
-plt.title("Drift velocity")
-plt.xlabel("Cathode voltage")
-plt.ylabel("drift velocity")
-plt.errorbar(voltages, dist/drifttimes, yerr=dist/drifttimes**2*drifttimes_err)
-#plt.scatter(voltages, starttimes)
-plt.show()
+##########
+# Plotting
+##########
+
+fontsize = 0.04
+
+gr = TGraphErrors(len(voltages), voltages/1000, v_drift*1000, zeros(len(voltages)), 1000*v_drift_err)
+
+gr.GetXaxis().SetTitle("Drift voltage [kV]")
+gr.GetYaxis().SetTitle("Drift velocity [mm/#mus]")
+gr.SetTitle("Drift velocity")
+
+gr.GetYaxis().SetTitleOffset(1.25)
+
+gr.SetMarkerStyle(8)
+gr.GetXaxis().SetLabelSize(fontsize)
+gr.GetXaxis().SetTitleSize(fontsize)
+gr.GetYaxis().SetLabelSize(fontsize)
+gr.GetYaxis().SetTitleSize(fontsize)
+
+gr.Draw("AP")
 
 c1.Draw()
+c1.Print("../plots/drift.pdf")
 
 f.Close()
