@@ -140,7 +140,7 @@ def save_event_tree(filename, treename):
             height[i][0] = max(-v_re[argmin(d):min(argmin(d) + 10,128)] - noise_lvl)
 
             # Use the drift velocity to get hit positions for each wire
-            x[i] = v_drift * (time[i][0] - s)
+            x[i] = v_drift * (time[i][0] - s) + 5
 
         # Fit the track if channel number is greater than 1
         if n_ch > 1:

@@ -26,6 +26,10 @@ f = TFile("../data.root")
 gStyle.SetPadTickX(1)
 gStyle.SetPadTickY(1)
 
+# Data from the MAGBOLTZ simulation
+v_mb = array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0], dtype=float)
+v_drift_mb = array([3.230387, 6.864764, 8.948285, 9.703015, 9.715611, 9.391496, 8.948629, 8.485581, 8.046513, 7.646549], dtype=float)
+
 c1 = TCanvas("c1","c1",200,10,500,500)
 c1.cd()
 
@@ -87,19 +91,39 @@ fontsize = 0.04
 
 gr = TGraphErrors(len(voltages), voltages/1000/0.1/100, v_drift*100, zeros(len(voltages)), 100*v_drift_err)
 
+gr_mb = TGraph(len(v_mb), v_mb, v_drift_mb)
+
 gr.GetXaxis().SetTitle("Drift field [kV/cm]")
 gr.GetYaxis().SetTitle("Drift velocity [cm/#mus]")
 gr.SetTitle("Drift velocity")
 
 gr.GetYaxis().SetTitleOffset(1.25)
+gr.SetMinimum(6)
 
-gr.SetMarkerStyle(8)
+gr.GetXaxis().SetLimits(0.16, 0.64)
+
+gr.SetMarkerStyle(2)
 gr.GetXaxis().SetLabelSize(fontsize)
 gr.GetXaxis().SetTitleSize(fontsize)
 gr.GetYaxis().SetLabelSize(fontsize)
 gr.GetYaxis().SetTitleSize(fontsize)
 
+gr_mb.SetMarkerStyle(8)
+
 gr.Draw("AP")
+gr_mb.Draw("P")
+
+gr.SetName("gr")
+gr_mb.SetName("gr_mb")
+
+leg = TLegend(0.55,0.15,0.8,0.3)
+leg.SetBorderSize(0)
+leg.SetTextSize(fontsize)
+
+leg.AddEntry("gr","Measurement","p")
+leg.AddEntry("gr_mb","Simulation","p")
+
+leg.Draw()
 
 c1.Draw()
 c1.Print("../plots/drift.pdf")
