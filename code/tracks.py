@@ -17,9 +17,17 @@ tree = f.Get("drift_4000V")
 
 th = 0.02
 
+cut = "Chn1_Height>{0}&&Chn3_Height>{0}&&Chn7_Height>{0}&&Chn8_Height>{0}".format(th)
+
 theta_max = arctan(100/290.)
 
-cut = "Chn1_Height>{0}&&Chn3_Height>{0}&&Chn7_Height>{0}&&Chn8_Height>{0}".format(th)
+print("Maximum angle [rad]: {}".format(theta_max))
+print("Number of total events: {}".format(tree.GetEntries()))
+print("Number of events after applying threshold: {}".format(tree.GetEntries(cut)))
+print("Number of events after removing bad fits: {}".format(tree.GetEntries(cut+"&&X0Err<6&&ThetaErr<0.04")))
+print("Number of events after removing bad fits (x0 only): {}".format(tree.GetEntries(cut+"&&X0Err<6")))
+print("Number of events after removing bad fits (theta only): {}".format(tree.GetEntries(cut+"&&ThetaErr<0.04")))
+
 
 c1 = TCanvas("c1","c1",200,10,1000,500);
 c1.Divide(2,1,0,0)

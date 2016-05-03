@@ -11,6 +11,9 @@ import re
 
 gROOT.SetBatch()
 
+gStyle.SetPadTickX(1)
+gStyle.SetPadTickY(1)
+
 f = TFile("../data.root")
 
 c1 = TCanvas("c1","c1",200,10,500,500)

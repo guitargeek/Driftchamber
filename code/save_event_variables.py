@@ -140,7 +140,7 @@ def save_event_tree(filename, treename):
             height[i][0] = max(-v_re[argmin(d):min(argmin(d) + 10,128)] - noise_lvl)
 
             # Use the drift velocity to get hit positions for each wire
-            x[i] = v_drift * (time[i][0] - s) + 5
+            x[i] = v_drift * (time[i][0] - s)
 
         # Fit the track if channel number is greater than 1
         if n_ch > 1:
@@ -150,7 +150,7 @@ def save_event_tree(filename, treename):
 
             x0[0] = fit.GetParameter(0)
             theta[0] = arctan(fit.GetParameter(1))
-            theta_err[0] = 1/(1+fit.GetParameter(1)*2)*fit.GetParError(1)
+            theta_err[0] = abs(1/(1+fit.GetParameter(1)*2)*fit.GetParError(1))
             x0_err[0] = fit.GetParError(0)
 
         outtree.Fill()
