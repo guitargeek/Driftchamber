@@ -40,7 +40,9 @@ h_theta = TH1F("hTheta", "", 30, -0.35, 0.45)
 n_theta = tree.Draw("Theta>>hTheta", cut+"&&ThetaErr<0.04")
 
 f_x0 = TF1("fX0", "{}/(30*100/150)*(x<100)*(x>0)".format(n_x0), -1, 101)
-f_theta = TF1("fTheta", "0.8/30*{0}*(-abs((x/{1}))+1)/{1}".format(n_theta, theta_max), -1, 101)
+#f_theta = TF1("fTheta", "0.8/30*{0}*(-abs((x/{1}))+1)/{1}".format(n_theta, theta_max), -1, 101)
+# consider the cos(theta)^2 prediction
+f_theta = TF1("fTheta", "(0.8/30*{0}*(-abs((x/{1}))+1)/{1})*cos(x)**2".format(n_theta, theta_max), -1, 101)
 
 # Style histograms
 h_x0.SetLineColor(1)

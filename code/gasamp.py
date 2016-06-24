@@ -11,6 +11,7 @@ import re
 
 gROOT.SetBatch()
 
+# Axis on both sides
 gStyle.SetPadTickX(1)
 gStyle.SetPadTickY(1)
 
@@ -66,10 +67,6 @@ voltages = [array(x, dtype=float)/1000 for x in voltages]
 ##########
 # Plotting
 ##########
-
-# Axis on both sides
-gStyle.SetPadTickX(1)
-gStyle.SetPadTickY(1)
 
 fontsize = 0.04
 

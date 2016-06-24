@@ -5,6 +5,7 @@ muon tracks are distributed in the wire chamber and compare with measurement.
 
 from numpy import sin, cos, tan, pi, logical_and, greater_equal, less, array
 from numpy.random import rand
+from ROOT import TH1F
 
 # Dimensions of the driftchamber
 
@@ -24,8 +25,10 @@ def is_triggering(x, z, theta, phi):
 N = 1e6
 
 muons = rand(4, N)
+# The positions
 muons[0] = muons[0] * d
 muons[1] = muons[1] * b
+# The angles
 muons[2] = (muons[2] - 0.5)*pi
 muons[3] = (muons[3] - 0.5)*pi
 
@@ -36,8 +39,6 @@ print("Fraction triggered: {}".format(n/N))
 
 # We need only the triggered muons now
 muons = [muons[i][triggered] for i in range(4)]
-
-from ROOT import TH1F
 
 hist = TH1F("h", "h", 100, -1, 1)
 #hist = TH1F("h", "h", 100, -100, 200)

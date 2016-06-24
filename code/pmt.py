@@ -96,7 +96,7 @@ legt1.SetBorderSize(0)
 legt1.SetTextSize(fontsize)
 
 legi1 = TLegend(0.2,0.90,0.53,0.83)
-legi1.SetHeader( "V_{th} = " + str(v_th_1))
+legi1.SetHeader( "V_{th} = " + str(v_th_1) + " mV")
 legi1.SetBorderSize(0)
 legi1.SetTextSize(fontsize)
 
@@ -113,7 +113,7 @@ legt2.SetBorderSize(0);
 legt2.SetTextSize(fontsize);
 
 legi2 = TLegend(0.12,0.90,0.53,0.83);
-legi2.SetHeader( "V_{th} = " + str(v_th_2));
+legi2.SetHeader( "V_{th} = " + str(v_th_2) + " mV");
 legi2.SetBorderSize(0);
 legi2.SetTextSize(fontsize);
 
