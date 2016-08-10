@@ -7,11 +7,13 @@ this new rootfile. If some information is missing, this script should be editetd
 to save an imporved set of event variables.
 """
 
-from ROOT import TFile, TGraph, TF1, TTree, TTimeStamp, AddressOf, TCanvas
+from ROOT import TFile, TGraph, TF1, TTree, TTimeStamp, AddressOf, TCanvas, TLegend, gROOT
 from sys import argv
 from numpy import array, argmax, mean, float32, zeros, uint32, diff, argmin, arctan
 from scipy.integrate import simps
 import os
+
+gROOT.SetBatch(True)
 
 # The drift velocity in mm/ns which was found by drift.py
 v_drift = 0.13781766497 # WARNING! THIS HOLDS ONLY FOR THE 4000V DATA!
@@ -37,6 +39,9 @@ def rebin(array, n):
         else:
             rebin = (rebin[:-1:2] + rebin[1::2])/2
     return rebin
+
+
+fontsize = 0.04
 
 # Number of voltage measurements in each channel per event
 n = 1024
@@ -141,6 +146,50 @@ def save_event_tree(filename, treename):
 
             # Use the drift velocity to get hit positions for each wire
             x[i] = v_drift * (time[i][0] - s)
+
+        # Plot one specific event to visualize the procedure
+        if n_ch > 1 and "4000V" in filename and j == 0:
+            c1 = TCanvas("c1","c1",200,10,500,500)
+            c1.cd()
+            g1 = TGraph(len(t[3]), array(t[3], dtype=float), array(v[3], dtype=float))
+            g2 = TGraph(len(td), array(td, dtype=float), array(vd, dtype=float))
+            g3 = TGraph(len(td), array(td, dtype=float), array(d, dtype=float))
+            g1.GetXaxis().SetTitle("Time [ns]")
+            g1.GetYaxis().SetTitle("Signal [mV]")
+            g1.SetTitle("Signal example")
+            g2.SetLineWidth(2)
+            g2.SetMarkerStyle(33)
+            g3.SetMarkerStyle(33)
+            g3.SetLineStyle(2)
+
+            g1.GetXaxis().SetLimits(0,1550)
+
+            g1.GetYaxis().SetTitleOffset(1.25)
+            g1.GetXaxis().SetLabelSize(fontsize)
+            g1.GetXaxis().SetTitleSize(fontsize)
+            g1.GetYaxis().SetLabelSize(fontsize)
+            g1.GetYaxis().SetTitleSize(fontsize)
+
+            g1.SetName("g1")
+            g2.SetName("g2")
+            g3.SetName("g3")
+
+            g1.Draw("AP")
+            g2.Draw("L")
+            g3.Draw("L")
+
+            leg = TLegend(0.2,0.13,0.5,0.45)
+            leg.SetBorderSize(0)
+            leg.SetTextSize(fontsize)
+
+            leg.AddEntry("g1", "Data", "p")
+            leg.AddEntry("g2", "Moving average", "l")
+            leg.AddEntry("g3", "Derivative of MA", "l")
+
+            leg.Draw()
+
+            c1.Draw()
+            c1.Print("../plots/example.pdf")
 
         # Fit the track if channel number is greater than 1
         if n_ch > 1:

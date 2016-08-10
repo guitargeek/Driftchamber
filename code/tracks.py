@@ -79,7 +79,7 @@ h_x0.SetMaximum(67)
 h_theta.SetMaximum(67)
 
 h_x0.GetYaxis().SetTitle("Number of events")
-h_x0.GetXaxis().SetTitle("x [mm]")
+h_x0.GetXaxis().SetTitle("x_{0} [mm]")
 h_theta.GetXaxis().SetTitle("#theta [rad]")
 
 gPad.SetTopMargin(0.001)
@@ -144,7 +144,7 @@ h.GetYaxis().SetLabelSize(fontsize)
 h.GetYaxis().SetTitleSize(fontsize)
 h.SetLineColor(1)
 
-h.GetXaxis().SetTitle("x [mm]")
+h.GetXaxis().SetTitle("x_{0} [mm]")
 h.GetYaxis().SetTitle("#theta [rad]")
 
 h.Draw("BOX")
