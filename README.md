@@ -1,4 +1,4 @@
-# Measuring cosmic muons with a driftchamber
+# Measuring Cosmic Muons with a Driftchamber
 ## Overview
 The driftchamber experiments in advanced practical physics class. The data with
 the driftchamber events can be found in \[1\].
